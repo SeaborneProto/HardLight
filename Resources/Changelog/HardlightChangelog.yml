@@ -2392,3 +2392,9 @@ Entries:
       message: More aphrodesiac bites
   id: 263
   time: '2026-04-09T01:17:51.0000000+00:00'
+- author: Jerulean
+  changes:
+    - type: Add
+      message: Two recipes for Tiramisu.
+  id: 264
+  time: '2026-04-09T01:18:43.0000000+00:00'
