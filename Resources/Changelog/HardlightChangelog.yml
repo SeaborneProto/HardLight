@@ -2788,3 +2788,9 @@ Entries:
       message: New wallets & Arcadiawear!
   id: 297
   time: '2026-04-18T22:48:49.0000000+00:00'
+- author: Illumos
+  changes:
+    - type: Add
+      message: Tactical Pack of Holding
+  id: 298
+  time: '2026-04-18T22:58:56.0000000+00:00'
