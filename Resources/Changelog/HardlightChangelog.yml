@@ -2892,3 +2892,14 @@ Entries:
       message: Gamemaster lawset
   id: 312
   time: '2026-04-20T22:37:28.0000000+00:00'
+- author: TrylobyteWasTaken
+  changes:
+    - type: Add
+      message: >-
+        Plastitanium sheets can now be crafted at an engineering techfab for
+        diamonds, bananium, and plasteel.  Costs are experimental and subject to
+        change.
+    - type: Add
+      message: You can now build plastitanium walls and windows.
+  id: 313
+  time: '2026-04-20T22:44:14.0000000+00:00'
