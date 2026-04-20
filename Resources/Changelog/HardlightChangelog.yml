@@ -2868,3 +2868,9 @@ Entries:
         their contents changed.
   id: 308
   time: '2026-04-20T21:24:25.0000000+00:00'
+- author: Kronyxxx
+  changes:
+    - type: Fix
+      message: Reduced lag caused by nuclear reactor simulation under heavy load.
+  id: 309
+  time: '2026-04-20T21:41:09.0000000+00:00'
