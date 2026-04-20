@@ -16,7 +16,7 @@ public sealed partial class RadarBlipsSystem : EntitySystem
     private const float MaxBlipRenderDistance = 256f;
     private static readonly List<(NetEntity? Grid, Vector2 Start, Vector2 End, float Thickness, Color Color)> EmptyHitscanList = new();
     private TimeSpan _lastRequestTime = TimeSpan.Zero;
-    private static readonly TimeSpan RequestThrottle = TimeSpan.FromMilliseconds(500);
+    public static readonly TimeSpan RequestThrottle = TimeSpan.FromMilliseconds(500);
 
     private TimeSpan _lastUpdatedTime;
     private List<BlipNetData> _blips = new();
@@ -48,14 +48,14 @@ public sealed partial class RadarBlipsSystem : EntitySystem
         _blips.Remove(blipid);
     }
 
-    public void RequestBlips(EntityUid console)
+    public void RequestBlips(EntityUid console, bool force = false)
     {
         // Only request if we have a valid console
         if (!Exists(console))
             return;
 
         // Add request throttling to avoid network spam
-        if (_timing.CurTime - _lastRequestTime < RequestThrottle)
+        if (!force && _timing.CurTime - _lastRequestTime < RequestThrottle)
             return;
 
         _lastRequestTime = _timing.CurTime;
