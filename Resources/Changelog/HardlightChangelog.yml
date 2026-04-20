@@ -2812,3 +2812,9 @@ Entries:
       message: Bluespace bags are now chameleon
   id: 301
   time: '2026-04-19T22:44:39.0000000+00:00'
+- author: Illumos
+  changes:
+    - type: Add
+      message: THIRTY SEVEN new wing markings!
+  id: 302
+  time: '2026-04-20T04:00:17.0000000+00:00'
