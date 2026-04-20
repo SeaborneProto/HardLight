@@ -2880,3 +2880,9 @@ Entries:
       message: Added hotfixes to previous issues
   id: 310
   time: '2026-04-20T22:14:57.0000000+00:00'
+- author: Illumos
+  changes:
+    - type: Add
+      message: Futuristic gasmasks now actually work as voice masks.
+  id: 311
+  time: '2026-04-20T22:37:00.0000000+00:00'
