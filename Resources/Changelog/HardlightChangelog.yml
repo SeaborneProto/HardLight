@@ -2903,3 +2903,9 @@ Entries:
       message: You can now build plastitanium walls and windows.
   id: 313
   time: '2026-04-20T22:44:14.0000000+00:00'
+- author: fenndragon
+  changes:
+    - type: Add
+      message: Added Nonconsent Toggle
+  id: 314
+  time: '2026-04-20T22:54:47.0000000+00:00'
