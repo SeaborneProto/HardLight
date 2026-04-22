@@ -2915,3 +2915,15 @@ Entries:
       message: Plastitanium walls now build off girders.
   id: 315
   time: '2026-04-20T23:05:01.0000000+00:00'
+- author: fenndragon
+  changes:
+    - type: Add
+      message: Added more patreon sprites
+    - type: Add
+      message: Added the last of the Shadekin countermeasures
+    - type: Add
+      message: Added recipe to build Beam prisms
+    - type: Fix
+      message: Fixed serverside issues with bodies and organs
+  id: 316
+  time: '2026-04-22T06:01:27.0000000+00:00'
