@@ -158,15 +158,19 @@ public sealed class ShipyardGridSaveSystem : EntitySystem
             return;
 
         var now = _timing.RealTime;
-        var expired = new List<Guid>();
+        // Lazy-allocate: most ticks have no expirations, so avoid the per-tick List allocation entirely.
+        List<Guid>? expired = null;
 
         foreach (var (requestId, pending) in _pendingTrackedSaves)
         {
             if (now - pending.CreatedAt < PendingShipSaveTimeout)
                 continue;
 
-            expired.Add(requestId);
+            (expired ??= new List<Guid>()).Add(requestId);
         }
+
+        if (expired == null)
+            return;
 
         foreach (var requestId in expired)
         {

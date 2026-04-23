@@ -592,6 +592,7 @@ public sealed partial class FireControlSystem : EntitySystem
         }
 
         // Check if there's any obstacles in the line of sight, only considering entities on the same grid
+        // returnOnFirstHit + GetEnumerator avoids materializing a list just to test emptiness.
         var raycastResults = _physics.IntersectRayWithPredicate(
             mapId,
             ray,
@@ -599,10 +600,10 @@ public sealed partial class FireControlSystem : EntitySystem
             IgnoreEntityNotOnSameGrid,
             rayDistance,
             returnOnFirstHit: true // We only need to know if there's ANY obstacle
-        ).ToList();
+        );
 
         // Has line of sight if there are no obstacles in the path
-        return raycastResults.Count == 0;
+        return !raycastResults.Any();
     }
 
     /// <summary>
