@@ -2987,3 +2987,15 @@ Entries:
         duplicate client updates.
   id: 323
   time: '2026-04-23T00:48:24.0000000+00:00'
+- author: Kronyxxx
+  changes:
+    - type: Fix
+      message: >-
+        Reduced sensor monitoring console polling load and background
+        device-network spam.
+    - type: Fix
+      message: >-
+        Sensor monitoring consoles now refresh immediately on open without
+        polling every frame.
+  id: 324
+  time: '2026-04-23T02:07:50.0000000+00:00'
