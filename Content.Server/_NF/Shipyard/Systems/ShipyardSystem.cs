@@ -640,77 +640,86 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             if (protoNode is not MappingDataNode protoMap)
                 continue;
 
-            if (!protoMap.TryGet("entities", out SequenceDataNode? entitiesSeq) || entitiesSeq == null)
+            if (protoMap.TryGet("entities", out SequenceDataNode? entitiesSeq) && entitiesSeq != null)
+            {
+                foreach (var entityNode in entitiesSeq)
+                {
+                    if (entityNode is MappingDataNode entMap)
+                        PruneLoadEntityNodeReferences(entMap, removedEntityUids);
+                }
+
+                continue;
+            }
+
+            // Older ship saves can use a flat legacy entities list under the root `entities:` section.
+            // If the parsed YAML is in that shape, each item here is already an entity node.
+            PruneLoadEntityNodeReferences(protoMap, removedEntityUids);
+        }
+    }
+
+    private static void PruneLoadEntityNodeReferences(MappingDataNode entMap, HashSet<string> removedEntityUids)
+    {
+        if (!entMap.TryGet("components", out SequenceDataNode? comps) || comps == null)
+            return;
+
+        foreach (var compNode in comps)
+        {
+            if (compNode is not MappingDataNode compMap)
                 continue;
 
-            foreach (var entityNode in entitiesSeq)
+            if (!compMap.TryGet("type", out ValueDataNode? typeNode) || typeNode == null)
+                continue;
+
+            var componentType = typeNode.Value;
+
+            if (componentType == "ContainerContainer")
             {
-                if (entityNode is not MappingDataNode entMap)
+                if (!compMap.TryGet("containers", out MappingDataNode? containersMap) || containersMap == null)
                     continue;
 
-                if (!entMap.TryGet("components", out SequenceDataNode? comps) || comps == null)
-                    continue;
-
-                foreach (var compNode in comps)
+                foreach (var (_, containerNode) in containersMap)
                 {
-                    if (compNode is not MappingDataNode compMap)
+                    if (containerNode is not MappingDataNode containerMap)
                         continue;
 
-                    if (!compMap.TryGet("type", out ValueDataNode? typeNode) || typeNode == null)
-                        continue;
-
-                    var componentType = typeNode.Value;
-
-                    if (componentType == "ContainerContainer")
+                    if (containerMap.TryGet("ents", out SequenceDataNode? entsNode) && entsNode != null)
                     {
-                        if (!compMap.TryGet("containers", out MappingDataNode? containersMap) || containersMap == null)
-                            continue;
-
-                        foreach (var (_, containerNode) in containersMap)
+                        for (var idx = entsNode.Count - 1; idx >= 0; idx--)
                         {
-                            if (containerNode is not MappingDataNode containerMap)
+                            if (entsNode[idx] is not ValueDataNode entValue || entValue.IsNull)
                                 continue;
 
-                            if (containerMap.TryGet("ents", out SequenceDataNode? entsNode) && entsNode != null)
-                            {
-                                for (var idx = entsNode.Count - 1; idx >= 0; idx--)
-                                {
-                                    if (entsNode[idx] is not ValueDataNode entValue || entValue.IsNull)
-                                        continue;
-
-                                    if (IsStaleSerializedUidReference(entValue.Value, removedEntityUids))
-                                        entsNode.RemoveAt(idx);
-                                }
-                            }
-
-                            if (containerMap.TryGet("ent", out ValueDataNode? entNode) && entNode != null && !entNode.IsNull)
-                            {
-                                if (IsStaleSerializedUidReference(entNode.Value, removedEntityUids))
-                                    containerMap["ent"] = ValueDataNode.Null();
-                            }
+                            if (IsStaleSerializedUidReference(entValue.Value, removedEntityUids))
+                                entsNode.RemoveAt(idx);
                         }
-
-                        continue;
                     }
 
-                    if (componentType != "Storage"
-                        || !compMap.TryGet("storedItems", out MappingDataNode? storedItemsMap)
-                        || storedItemsMap == null)
+                    if (containerMap.TryGet("ent", out ValueDataNode? entNode) && entNode != null && !entNode.IsNull)
                     {
-                        continue;
+                        if (IsStaleSerializedUidReference(entNode.Value, removedEntityUids))
+                            containerMap["ent"] = ValueDataNode.Null();
                     }
-
-                    var removeKeys = new List<string>();
-                    foreach (var (itemUid, _) in storedItemsMap)
-                    {
-                        if (IsStaleSerializedUidReference(itemUid, removedEntityUids))
-                            removeKeys.Add(itemUid);
-                    }
-
-                    foreach (var key in removeKeys)
-                        storedItemsMap.Remove(key);
                 }
+
+                continue;
             }
+
+            if (componentType != "Storage"
+                || !compMap.TryGet("storedItems", out MappingDataNode? storedItemsMap)
+                || storedItemsMap == null)
+            {
+                continue;
+            }
+
+            var removeKeys = new List<string>();
+            foreach (var (itemUid, _) in storedItemsMap)
+            {
+                if (IsStaleSerializedUidReference(itemUid, removedEntityUids))
+                    removeKeys.Add(itemUid);
+            }
+
+            foreach (var key in removeKeys)
+                storedItemsMap.Remove(key);
         }
     }
 
