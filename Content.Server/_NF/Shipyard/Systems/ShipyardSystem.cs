@@ -704,6 +704,19 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 continue;
             }
 
+            if (componentType == "Transform")
+            {
+                if (compMap.TryGet("parent", out ValueDataNode? parentNode)
+                    && parentNode != null
+                    && !parentNode.IsNull
+                    && IsStaleSerializedUidReference(parentNode.Value, removedEntityUids))
+                {
+                    compMap["parent"] = new ValueDataNode("invalid");
+                }
+
+                continue;
+            }
+
             if (componentType != "Storage"
                 || !compMap.TryGet("storedItems", out MappingDataNode? storedItemsMap)
                 || storedItemsMap == null)

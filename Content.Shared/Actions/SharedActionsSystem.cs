@@ -292,8 +292,34 @@ public abstract class SharedActionsSystem : EntitySystem
 
     private void OnActionsGetState(EntityUid uid, ActionsComponent component, ref ComponentGetState args)
     {
-        SanitizeActionReferences(uid, component);
-        args.State = new ActionsComponentState(GetNetEntitySet(component.Actions));
+        args.State = new ActionsComponentState(GetActionNetEntities(uid, component));
+    }
+
+    private HashSet<NetEntity> GetActionNetEntities(EntityUid uid, ActionsComponent component)
+    {
+        var removed = false;
+        var netEntities = new HashSet<NetEntity>(component.Actions.Count);
+
+        foreach (var actionId in component.Actions.ToArray())
+        {
+            if (actionId.IsValid()
+                && !TerminatingOrDeleted(actionId)
+                && HasComp<MetaDataComponent>(actionId)
+                && TryGetNetEntity(actionId, out var netEntity)
+                && netEntity != null)
+            {
+                netEntities.Add(netEntity.Value);
+                continue;
+            }
+
+            component.Actions.Remove(actionId);
+            removed = true;
+        }
+
+        if (removed)
+            Dirty(uid, component);
+
+        return netEntities;
     }
 
     private void SanitizeActionReferences(EntityUid uid, ActionsComponent component)
@@ -302,7 +328,9 @@ public abstract class SharedActionsSystem : EntitySystem
 
         foreach (var actionId in component.Actions.ToArray())
         {
-            if (actionId.IsValid() && !TerminatingOrDeleted(actionId))
+            if (actionId.IsValid()
+                && !TerminatingOrDeleted(actionId)
+                && HasComp<MetaDataComponent>(actionId))
                 continue;
 
             component.Actions.Remove(actionId);
