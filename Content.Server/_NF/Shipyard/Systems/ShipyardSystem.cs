@@ -12,6 +12,7 @@ using Content.Shared.GameTicking;
 using Robust.Server.GameObjects;
 using Robust.Shared.Map;
 using Content.Shared._NF.CCVar;
+using Content.Shared.HL.CCVar; // HardLight
 using Robust.Shared.Configuration;
 using System.Diagnostics.CodeAnalysis;
 using System.IO; // HardLight
@@ -87,6 +88,12 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     [Dependency] private readonly ShipSerializationSystem _shipSerialization = default!; // HardLight
 
     private EntityQuery<TransformComponent> _transformQuery;
+    // HardLight: cache queries hit per-entity by SanitizeLoadedShuttle so the post-load tree walk
+    // does not pay a fresh component-dictionary lookup for every entity in a 5k-entity capital ship.
+    private EntityQuery<ContainerManagerComponent> _containerManagerQuery;
+    private EntityQuery<DockingComponent> _dockingQuery;
+    private EntityQuery<UseDelayComponent> _useDelayQuery;
+    private EntityQuery<MetaDataComponent> _metaQuery;
 
     public MapId? ShipyardMap { get; private set; }
     private float _shuttleIndex;
@@ -122,6 +129,11 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         base.Initialize();
 
         _transformQuery = GetEntityQuery<TransformComponent>();
+        // HardLight: queries reused by the ship-load sanitize pass.
+        _containerManagerQuery = GetEntityQuery<ContainerManagerComponent>();
+        _dockingQuery = GetEntityQuery<DockingComponent>();
+        _useDelayQuery = GetEntityQuery<UseDelayComponent>();
+        _metaQuery = GetEntityQuery<MetaDataComponent>();
 
         // FIXME: Load-bearing jank - game doesn't want to create a shipyard map at this point.
         _enabled = _configManager.GetCVar(NFCCVars.Shipyard);
@@ -246,7 +258,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             _station.AddGridToStation(stationMember.Station, grid);
         }
 
-        _shuttle.TryFTLDock(grid, shuttleComponent, targetGrid);
+        TryFTLDockForPurchase(grid, shuttleComponent, targetGrid); // HardLight: capped dock search on purchase
         QueueShipyardMapCleanupIfEmpty(); // HardLight
         shuttleEntityUid = grid;
         return true;
@@ -537,10 +549,26 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             _station.AddGridToStation(stationMember.Station, grid);
         }
 
-        _shuttle.TryFTLDock(grid, shuttleComponent, targetGrid);
+        TryFTLDockForPurchase(grid, shuttleComponent, targetGrid); // HardLight: capped dock search on purchase
         QueueShipyardMapCleanupIfEmpty(); // HardLight
         shuttleEntityUid = grid;
         return true;
+    }
+
+    // HardLight: route shipyard purchase docking through the capped variant of TryFTLDock.
+    // The full dock-pair search becomes pathological on large stations + large ships and visibly
+    // freezes the server during a purchase. The capped search samples a spatially-spread, priority-
+    // tag-preserving subset of docks per side and falls back to the full search inside the docking
+    // system if no valid config is found, so this can never fail a purchase that would have
+    // succeeded before. Disabled by setting hardlight.shipyard.purchase_dock_cap_enabled = false.
+    private bool TryFTLDockForPurchase(EntityUid shuttleUid, ShuttleComponent shuttleComponent, EntityUid targetGrid)
+    {
+        if (!_configManager.GetCVar(HLCCVars.ShipyardPurchaseDockCapEnabled))
+            return _shuttle.TryFTLDock(shuttleUid, shuttleComponent, targetGrid);
+
+        var maxShuttleDocks = _configManager.GetCVar(HLCCVars.ShipyardPurchaseDockCapShuttle);
+        var maxGridDocks = _configManager.GetCVar(HLCCVars.ShipyardPurchaseDockCapGrid);
+        return _shuttle.TryFTLDock(shuttleUid, shuttleComponent, targetGrid, maxShuttleDocks, maxGridDocks);
     }
 
     /// <summary>
@@ -641,8 +669,13 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 return PruneLoadYamlReferencesToRemovedEntitiesLineBased(yamlData, removedEntityUids);
 
             var knownEntityUids = CollectSerializedEntityUids(root);
-            PruneLoadNodeReferencesToRemovedEntities(root, removedEntityUids, knownEntityUids);
-            return WriteLoadYamlNodeToString(root);
+            // HardLight: track whether the prune actually mutated anything so we can skip the
+            // expensive YAML serialize round-trip on saves that have nothing to clean up. The
+            // round-trip can also subtly reorder keys / re-quote scalars, so preserving the
+            // original byte-identical YAML when no edits occur is a correctness win as well.
+            var changed = false;
+            PruneLoadNodeReferencesToRemovedEntities(root, removedEntityUids, knownEntityUids, ref changed);
+            return changed ? WriteLoadYamlNodeToString(root) : yamlData;
         }
         catch
         {
@@ -651,7 +684,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     }
 
     // Structured pass for pruning stale container and storage references.
-    private static void PruneLoadNodeReferencesToRemovedEntities(MappingDataNode root, HashSet<string> removedEntityUids, HashSet<string> knownEntityUids)
+    private static void PruneLoadNodeReferencesToRemovedEntities(MappingDataNode root, HashSet<string> removedEntityUids, HashSet<string> knownEntityUids, ref bool changed)
     {
         if (!root.TryGet("entities", out SequenceDataNode? protoSeq) || protoSeq == null)
             return;
@@ -666,7 +699,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 foreach (var entityNode in entitiesSeq)
                 {
                     if (entityNode is MappingDataNode entMap)
-                        PruneLoadEntityNodeReferences(entMap, removedEntityUids, knownEntityUids);
+                        PruneLoadEntityNodeReferences(entMap, removedEntityUids, knownEntityUids, ref changed);
                 }
 
                 continue;
@@ -674,11 +707,11 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
             // Older ship saves can use a flat legacy entities list under the root `entities:` section.
             // If the parsed YAML is in that shape, each item here is already an entity node.
-            PruneLoadEntityNodeReferences(protoMap, removedEntityUids, knownEntityUids);
+            PruneLoadEntityNodeReferences(protoMap, removedEntityUids, knownEntityUids, ref changed);
         }
     }
 
-    private static void PruneLoadEntityNodeReferences(MappingDataNode entMap, HashSet<string> removedEntityUids, HashSet<string> knownEntityUids)
+    private static void PruneLoadEntityNodeReferences(MappingDataNode entMap, HashSet<string> removedEntityUids, HashSet<string> knownEntityUids, ref bool changed)
     {
         if (!entMap.TryGet("components", out SequenceDataNode? comps) || comps == null)
             return;
@@ -711,14 +744,20 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                                 continue;
 
                             if (IsStaleSerializedUidReference(entValue.Value, removedEntityUids))
+                            {
                                 entsNode.RemoveAt(idx);
+                                changed = true;
+                            }
                         }
                     }
 
                     if (containerMap.TryGet("ent", out ValueDataNode? entNode) && entNode != null && !entNode.IsNull)
                     {
                         if (IsStaleSerializedUidReference(entNode.Value, removedEntityUids))
+                        {
                             containerMap["ent"] = ValueDataNode.Null();
+                            changed = true;
+                        }
                     }
                 }
 
@@ -735,6 +774,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                     if (actionsNode[idx] is not ValueDataNode actionValue || actionValue.IsNull)
                     {
                         actionsNode.RemoveAt(idx);
+                        changed = true;
                         continue;
                     }
 
@@ -744,6 +784,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                         || !knownEntityUids.Contains(normalized))
                     {
                         actionsNode.RemoveAt(idx);
+                        changed = true;
                     }
                 }
 
@@ -758,6 +799,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                     && IsStaleSerializedUidReference(parentNode.Value, removedEntityUids))
                 {
                     compMap["parent"] = new ValueDataNode("invalid");
+                    changed = true;
                 }
 
                 continue;
@@ -779,6 +821,9 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
             foreach (var key in removeKeys)
                 storedItemsMap.Remove(key);
+
+            if (removeKeys.Count > 0)
+                changed = true;
         }
     }
 
@@ -1242,14 +1287,16 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     {
         var prunedContainers = 0;
 
+        // HardLight: use cached queries instead of TryComp<T> per entity. On a multi-thousand entity
+        // capital ship the original three TryComp calls per entity dominate this method's cost.
         VisitEntityAndDescendants(gridUid, uid =>
         {
             RemComp<JointComponent>(uid);
 
-            if (TryComp<ContainerManagerComponent>(uid, out var manager))
+            if (_containerManagerQuery.TryComp(uid, out var manager))
                 prunedContainers += PruneInvalidContainerContents(uid, manager);
 
-            if (TryComp<DockingComponent>(uid, out var dock))
+            if (_dockingQuery.TryComp(uid, out var dock))
             {
                 dock.DockJoint = null;
                 dock.DockJointId = null;
@@ -1257,12 +1304,12 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 if (dock.DockedWith != null)
                 {
                     var other = dock.DockedWith.Value;
-                    if (!other.IsValid() || !HasComp<MetaDataComponent>(other))
+                    if (!other.IsValid() || !_metaQuery.HasComp(other))
                         dock.DockedWith = null;
                 }
             }
 
-            if (TryComp<UseDelayComponent>(uid, out var useDelay))
+            if (_useDelayQuery.TryComp(uid, out var useDelay))
                 _useDelay.ResetAllDelays((uid, useDelay));
         });
 
