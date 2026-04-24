@@ -3086,3 +3086,11 @@ Entries:
         requiring a client restart.
   id: 332
   time: '2026-04-24T01:31:45.0000000+00:00'
+- author: Kronyxxx
+  changes:
+    - type: Fix
+      message: >-
+        Fixed character editor only showing the first character when any other
+        saved profile referenced a missing prototype.
+  id: 333
+  time: '2026-04-24T19:12:28.0000000+00:00'
