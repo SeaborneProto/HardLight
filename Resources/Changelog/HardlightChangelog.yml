@@ -3174,3 +3174,9 @@ Entries:
         they want a different refresh cadence.
   id: 341
   time: '2026-04-25T05:08:32.0000000+00:00'
+- author: fenndragon
+  changes:
+    - type: Add
+      message: Added mono upstream features for shields and AI
+  id: 342
+  time: '2026-04-25T05:29:14.0000000+00:00'
