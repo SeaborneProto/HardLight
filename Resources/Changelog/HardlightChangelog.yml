@@ -3231,3 +3231,11 @@ Entries:
         mounted turrets only fire, the core does the flying.
   id: 347
   time: '2026-04-25T22:05:54.0000000+00:00'
+- author: GravastarDragon
+  changes:
+    - type: Add
+      message: >-
+        Added four new borg chassis options. one in sec, service, engineering,
+        and salvage.
+  id: 348
+  time: '2026-04-25T22:17:40.0000000+00:00'
