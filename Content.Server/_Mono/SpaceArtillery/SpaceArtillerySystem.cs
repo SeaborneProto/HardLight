@@ -15,6 +15,7 @@ using Content.Shared.Power;
 using Content.Shared.Projectiles;
 using Content.Shared.Weapons.Ranged.Events;
 using Robust.Shared.Map;
+using Robust.Shared.Physics.Events;
 using Robust.Shared.Player;
 using SpaceArtilleryComponent = Content.Server._Mono.SpaceArtillery.Components.SpaceArtilleryComponent;
 
@@ -44,7 +45,28 @@ public sealed partial class SpaceArtillerySystem : EntitySystem
         SubscribeLocalEvent<SpaceArtilleryComponent, SignalReceivedEvent>(OnSignalReceived);
         SubscribeLocalEvent<SpaceArtilleryComponent, ChargeChangedEvent>(OnBatteryChargeChanged);
         SubscribeLocalEvent<ShipWeaponProjectileComponent, ProjectileHitEvent>(OnProjectileHit);
+        SubscribeLocalEvent<ShipWeaponProjectileComponent, PreventCollideEvent>(OnShipProjectilePreventCollide);
         SubscribeLocalEvent<ShipGunClassComponent, ExaminedEvent>(OnExamined);
+    }
+
+    /// <summary>
+    /// Ship-gun projectiles spawn on the firing ship's grid; without this they can collide with
+    /// the firing ship's own hull on the first physics step.
+    /// </summary>
+    private void OnShipProjectilePreventCollide(EntityUid uid, ShipWeaponProjectileComponent component, ref PreventCollideEvent args)
+    {
+        if (args.Cancelled)
+            return;
+
+        if (!TryComp<ProjectileComponent>(uid, out var projectile) || projectile.Weapon == null)
+            return;
+
+        var weaponGrid = _xform.GetGrid(projectile.Weapon.Value);
+        if (weaponGrid == null)
+            return;
+
+        if (args.OtherEntity == weaponGrid.Value || _xform.GetGrid(args.OtherEntity) == weaponGrid)
+            args.Cancelled = true;
     }
 
 
