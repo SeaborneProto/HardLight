@@ -3247,3 +3247,15 @@ Entries:
         to hit the center of the ship.
   id: 349
   time: '2026-04-25T22:39:32.0000000+00:00'
+- author: Kronyxxx
+  changes:
+    - type: Tweak
+      message: >-
+        Byte drones now only fully commit inside 500m, soft-chase out to 1000m,
+        and disengage after 10 seconds past 1000m.
+    - type: Tweak
+      message: >-
+        Gunnery console radar can now scroll out to 1500m for better situational
+        awareness.
+  id: 350
+  time: '2026-04-25T22:39:44.0000000+00:00'
