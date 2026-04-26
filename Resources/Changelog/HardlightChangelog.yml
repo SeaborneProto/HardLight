@@ -3285,3 +3285,11 @@ Entries:
         correct sprites instead of flashing error signs.
   id: 352
   time: '2026-04-26T21:39:51.0000000+00:00'
+- author: Kronyxxx
+  changes:
+    - type: Fix
+      message: >-
+        Fixed flatpacks incorrectly saying "No room to unpack!" on valid station
+        tiles.
+  id: 353
+  time: '2026-04-26T21:40:39.0000000+00:00'
