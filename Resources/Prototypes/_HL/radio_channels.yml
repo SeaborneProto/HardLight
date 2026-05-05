@@ -71,7 +71,7 @@
   name: chat-radio-vsr
   keycode: '.'
   frequency: 1779
-  color: "#595959"
+  color: "#7D8471"
   longRange: true
 
 - type: radioChannel
