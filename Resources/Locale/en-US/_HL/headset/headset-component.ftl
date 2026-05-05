@@ -11,5 +11,6 @@ chat-radio-dominos-robotics = Dominos Robotics
 chat-radio-talon = ADF-TALON
 chat-radio-starbound = Starbound BSS
 chat-radio-dusk-enclave = Dusk Enclave
+chat-radio-vsr = Korpus Novy Mir
 
 examine-radio-intrinsic-channels = Intrinsic frequencies:
