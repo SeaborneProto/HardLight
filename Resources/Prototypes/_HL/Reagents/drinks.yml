@@ -72,7 +72,7 @@
   desc: reagent-desc-breast-milk
   physicalDesc: reagent-physical-desc-opaque
   flavor: breast-milk
-  color: "#DFDFDF"
+  color: "#dddcce"
   recognizable: true
   plantMetabolism:
     - !type:PlantAdjustNutrition
