@@ -84,3 +84,5 @@
       effects:
       - !type:SatiateThirst
         factor: 4
+      - !type:SatiateHunger
+        factor: .5
