@@ -114,6 +114,7 @@
       - id: ToySkeleton
       - id: Basketball
       - id: Football
+      - id: TennisBall
       - id: BalloonNT
       - id: BalloonCorgi
       - id: MysteryFigureBox
@@ -131,7 +132,7 @@
       - id: ClothingHeadHatOutlawHat
       - id: ClothingHeadHatUshanka
       - id: ClothingHeadHatBunny
-      - id: ClothingMaskNeckGaiter
+      - id: ClothingGaiterCharcoal # HL
       - id: ClothingNeckScarfStripedZebra
       - id: ClothingOuterGhostSheet
       - id: ClothingUniformJumpsuitAncient
