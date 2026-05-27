@@ -82,6 +82,12 @@
   form: Protagonist
   name: Suburbia
   color: "#FFEA00"
+  
+- type: company
+  id: VSR
+  form: Protagonist
+  name: Korpus Novy Mir — "New World Corps"
+  color: "#595959"
 
 - type: company
   id: SBS
