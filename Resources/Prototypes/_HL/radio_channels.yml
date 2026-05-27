@@ -67,14 +67,6 @@
   longRange: true
 
 - type: radioChannel
-  id: KNM
-  name: chat-radio-vsr
-  keycode: '.'
-  frequency: 1779
-  color: "#7D8471"
-  longRange: true
-
-- type: radioChannel
   id: Pirate
   name: chat-radio-pirate
   keycode: 'l'
